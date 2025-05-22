@@ -14,9 +14,6 @@ def main():
     chemin_index = 0
     mode_move = False
     mode_collect = False
-
-    collect_button_rect = pygame.Rect(120, 10, 100, 40)
-
     mode_build = False
     mode_mine = False
     info_font = pygame.font.SysFont(None, 20)
@@ -29,6 +26,7 @@ def main():
 
     font = pygame.font.SysFont(None, 30)
     move_button_rect = pygame.Rect(10, 10, 100, 40)
+    collect_button_rect = pygame.Rect(120, 10, 100, 40)
     build_button_rect = pygame.Rect(230, 10, 100, 40)
     mine_button_rect = pygame.Rect(340, 10, 100, 40)
 
@@ -38,6 +36,7 @@ def main():
         pygame.draw.rect(ecran, move_color, move_button_rect)
         move_text = font.render("Move", True, (255, 255, 255))
         ecran.blit(move_text, (move_button_rect.x + 20, move_button_rect.y + 8))
+        
         pygame.draw.rect(ecran, (0, 100, 200), collect_button_rect)
         collect_text = font.render("Collect", True, (255, 255, 255))
         ecran.blit(collect_text, (collect_button_rect.x + 10, collect_button_rect.y + 8))
@@ -63,8 +62,6 @@ def main():
 
         ecran.blit(robot_info_surface, (10, 60))  
 
-
-
         # Bouton Build
         build_color = (0, 0, 200) if not mode_build else (0, 0, 100)
         pygame.draw.rect(ecran, build_color, build_button_rect)
@@ -89,10 +86,17 @@ def main():
 
                 if move_button_rect.collidepoint(pos):
                     mode_move = True
-                    mode_collect = False 
+                    mode_collect = mode_mine = False 
                 elif collect_button_rect.collidepoint(pos):
                     mode_collect = True
-                    mode_move = False     
+                    mode_move = mode_mine = False 
+                elif build_button_rect.collidepoint(pos):
+                    mode_build = True
+                    mode_move = mode_mine = mode_collect = False  
+                elif mine_button_rect.collidepoint(pos):
+                    mode_mine = True
+                    mode_move = mode_collect = False
+                    
                 elif mode_collect:
                     coord = get_hex_from_pixel(game_map, *pos)
                     if coord:
