@@ -1,5 +1,5 @@
 from map import Map
-from entities import EntityRobot, EntityMine
+from entities import EntityRobot, EntityMine, EntityStorage
 import pygame
 from graphism.graphique import get_hex_from_pixel, draw_hexagone
 
@@ -16,8 +16,9 @@ def main():
     mode_collect = False
     mode_build = False
     mode_mine = False
+    mode_storage = False
     info_font = pygame.font.SysFont(None, 20)
-#coucou
+    
     surface_w = int((game_map.getWidth() + 1) * 1.5 * game_map.getSize())
     surface_h = int((game_map.getHeight() + 2) * (3 ** 0.5) * game_map.getSize())
     ecran = pygame.display.set_mode((surface_w, surface_h))
@@ -29,6 +30,7 @@ def main():
     collect_button_rect = pygame.Rect(120, 10, 100, 40)
     build_button_rect = pygame.Rect(230, 10, 100, 40)
     mine_button_rect = pygame.Rect(340, 10, 100, 40)
+    storage_button_rect = pygame.Rect(340, 60, 100, 40) 
 
     def draw_button():
         # Bouton Move
@@ -74,6 +76,11 @@ def main():
             pygame.draw.rect(ecran, mine_color, mine_button_rect)
             mine_text = font.render("Mine", True, (0, 0, 0))
             ecran.blit(mine_text, (mine_button_rect.x + 20, mine_button_rect.y + 8))
+            
+            storage_color = (150, 150, 255) if not mode_storage else (100, 100, 200)
+            pygame.draw.rect(ecran, storage_color, storage_button_rect)
+            storage_text = font.render("Storage", True, (0, 0, 0))
+            ecran.blit(storage_text, (storage_button_rect.x + 5, storage_button_rect.y + 8))
 
     running = True
     while running:
@@ -86,16 +93,19 @@ def main():
 
                 if move_button_rect.collidepoint(pos):
                     mode_move = True
-                    mode_collect = mode_mine = False 
+                    mode_collect = mode_mine = mode_storage = False 
                 elif collect_button_rect.collidepoint(pos):
                     mode_collect = True
-                    mode_move = mode_mine = False 
+                    mode_move = mode_mine = mode_storage = False 
                 elif build_button_rect.collidepoint(pos):
                     mode_build = True
-                    mode_move = mode_mine = mode_collect = False  
+                    mode_move = mode_mine = mode_collect = mode_storage = False  
                 elif mine_button_rect.collidepoint(pos):
                     mode_mine = True
-                    mode_move = mode_collect = False
+                    mode_move = mode_collect = mode_storage = False
+                elif storage_button_rect.collidepoint(pos):
+                    mode_storage = True
+                    mode_move = mode_mine = mode_collect = False
                     
                 elif mode_collect:
                     coord = get_hex_from_pixel(game_map, *pos)
@@ -128,7 +138,6 @@ def main():
                         tx, ty = coord
                         tile = game_map.get_tile(ty, tx)
                         if tile and tile.getName() == "mountain":
-                            print("clic  montagne")
                             # Vérifier si une entité (robot) est sur une tuile adjacente
                             if tx % 2 == 0:
                                 offsets = [(1, 0), (1, -1), (0, -1), (0, 1), (-1, 0), (-1, -1)]
@@ -137,11 +146,29 @@ def main():
                                 offsets = [(1, 0), (1, 1), (0, -1), (0, 1), (-1, 0), (-1, 1)]
                             voisins = [(tx + dx, ty + dy) for dx, dy in offsets]
                             if perso.getPos() in voisins:
-                                print("robot adjacent a la montagne")
                                 tile.setBuilding(EntityMine(tx, ty))
                                 mode_mine = False
                             else:
                                 print("robot trop loin pour construire une mine")
+                                
+                elif mode_storage:
+                    coord = get_hex_from_pixel(game_map, *pos)
+                    if coord:
+                        tx, ty = coord
+                        tile = game_map.get_tile(ty, tx)
+                        if tile and tile.getName() in ("sand", "plains") and tile.getBuilding() is None:
+                            if tx % 2 == 0:
+                                offsets = [(1, 0), (1, -1), (0, -1), (0, 1), (-1, 0), (-1, -1)]
+                                
+                            else:
+                                offsets = [(1, 0), (1, 1), (0, -1), (0, 1), (-1, 0), (-1, 1)]
+                            voisins = [(tx + dx, ty + dy) for dx, dy in offsets]
+                            if perso.getPos() in voisins:
+                                tile.setBuilding(EntityStorage(tx, ty))
+                                print(f"Storage placé en ({tx}, {ty})")
+                                mode_storage = False
+                            
+                            
 
 
         if mode_move and chemin and chemin_index < len(chemin):
@@ -167,6 +194,9 @@ def main():
                 if tile.getBuilding() and isinstance(tile.getBuilding(), EntityMine):
                     center_x, center_y = draw_hexagone(game_map, ecran, x, y, tile, return_center=True)
                     pygame.draw.circle(ecran, (0, 0, 0), (center_x, center_y), 5)
+                if isinstance(tile.getBuilding(), EntityStorage):
+                    center_x, center_y = draw_hexagone(game_map, ecran, x, y, tile, return_center=True)
+                    pygame.draw.rect(ecran, (200, 200, 255), (center_x - 5, center_y - 5, 10, 10)) 
 
 
         mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -252,9 +282,6 @@ def main():
                     ecran.blit(entity_info_surface, (info_x, info_y))
             except IndexError:
                 pass
-
-
-
         
         draw_button()
         pygame.display.flip()
