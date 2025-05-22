@@ -31,7 +31,8 @@ def main():
     build_button_rect = pygame.Rect(230, 10, 100, 40)
     mine_button_rect = pygame.Rect(340, 10, 100, 40)
     storage_button_rect = pygame.Rect(340, 60, 100, 40) 
-
+    storage_button_rect = pygame.Rect(340, 110, 100, 40) 
+    
     def draw_button():
         move_color = (0, 200, 0) if not mode_move else (200, 0, 0)
         pygame.draw.rect(ecran, move_color, move_button_rect)
