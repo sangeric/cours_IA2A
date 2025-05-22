@@ -1,5 +1,5 @@
 from map import Map
-from entities import EntityRobot
+from entities import EntityRobot, EntityMine
 import pygame
 from graphism.graphique import get_hex_from_pixel, draw_hexagone
 
@@ -13,8 +13,9 @@ def main():
     chemin = []
     chemin_index = 0
     mode_move = False
+    mode_build = False
+    mode_mine = False
     info_font = pygame.font.SysFont(None, 20)
-
 
     surface_w = int((game_map.getWidth() + 1) * 1.5 * game_map.getSize())
     surface_h = int((game_map.getHeight() + 2) * (3 ** 0.5) * game_map.getSize())
@@ -24,12 +25,28 @@ def main():
 
     font = pygame.font.SysFont(None, 30)
     move_button_rect = pygame.Rect(10, 10, 100, 40)
+    build_button_rect = pygame.Rect(230, 10, 100, 40)
+    mine_button_rect = pygame.Rect(340, 10, 100, 40)
 
     def draw_button():
-        color = (0, 200, 0) if not mode_move else (200, 0, 0)
-        pygame.draw.rect(ecran, color, move_button_rect)
-        text = font.render("Move", True, (255, 255, 255))
-        ecran.blit(text, (move_button_rect.x + 20, move_button_rect.y + 8))
+        # Bouton Move
+        move_color = (0, 200, 0) if not mode_move else (200, 0, 0)
+        pygame.draw.rect(ecran, move_color, move_button_rect)
+        move_text = font.render("Move", True, (255, 255, 255))
+        ecran.blit(move_text, (move_button_rect.x + 20, move_button_rect.y + 8))
+
+        # Bouton Build
+        build_color = (0, 0, 200) if not mode_build else (0, 0, 100)
+        pygame.draw.rect(ecran, build_color, build_button_rect)
+        build_text = font.render("Build", True, (255, 255, 255))
+        ecran.blit(build_text, (build_button_rect.x + 20, build_button_rect.y + 8))
+
+        # Affichage conditionnel du bouton Mine
+        if mode_build:
+            mine_color = (200, 200, 0) if not mode_mine else (150, 150, 0)
+            pygame.draw.rect(ecran, mine_color, mine_button_rect)
+            mine_text = font.render("Mine", True, (0, 0, 0))
+            ecran.blit(mine_text, (mine_button_rect.x + 20, mine_button_rect.y + 8))
 
     running = True
     while running:
@@ -39,22 +56,60 @@ def main():
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
+
                 if move_button_rect.collidepoint(pos):
                     mode_move = True
+                    mode_build = mode_mine = False
+
+                elif build_button_rect.collidepoint(pos):
+                    mode_build = True
+                    mode_move = mode_mine = False
+
+                elif mine_button_rect.collidepoint(pos):
+                    mode_mine = True
+                    mode_move = False
+
                 elif mode_move:
                     coord = get_hex_from_pixel(game_map, *pos)
+                    if coord and game_map.getGrid()[coord[1]][coord[0]].getName() != "-":
+                        target = coord
+                        chemin = perso.dijkstra(graph, target)
+                        chemin_index = 0
+
+                elif mode_mine:
+                    coord = get_hex_from_pixel(game_map, *pos)
                     if coord:
-                        tile = game_map.getGrid()[coord[1]][coord[0]]
-                        if getattr(tile, "walkable", False):
-                            target = coord
-                            chemin = perso.dijkstra(graph, target)
-                            chemin_index = 0
+                        tx, ty = coord
+                        tile = game_map.get_tile(ty, tx)
+                        if tile and tile.getName() == "mountain":
+                            print("clic  montagne")
+                            # Vérifier si une entité (robot) est sur une tuile adjacente
+                            if tx % 2 == 0:
+                                offsets = [(1, 0), (1, -1), (0, -1), (0, 1), (-1, 0), (-1, -1)]
+                                
+                            else:
+                                offsets = [(1, 0), (1, 1), (0, -1), (0, 1), (-1, 0), (-1, 1)]
+                            voisins = [(tx + dx, ty + dy) for dx, dy in offsets]
+                            if perso.getPos() in voisins:
+                                print("robot adjacent a la montagne")
+                                tile.setBuilding(EntityMine(tx, ty))
+                                mode_mine = False
+                            else:
+                                print("robot trop loin pour construire une mine")
+
 
         if mode_move and chemin and chemin_index < len(chemin):
             perso.setPos(chemin[chemin_index])
             chemin_index += 1
             if chemin_index >= len(chemin):
                 mode_move = False 
+                
+        for y in range(game_map.getHeight()):
+            for x in range(game_map.getWidth()):
+                tile = game_map.get_tile(y, x)
+                building = tile.getBuilding()
+                if building and isinstance(building, EntityMine):
+                    building.update(tile)
 
         ecran.fill((0, 0, 0))
         for y in range(game_map.getHeight()):
@@ -63,6 +118,10 @@ def main():
                 if tile:
                     is_perso = (x, y) == perso.getPos()
                     draw_hexagone(game_map, ecran, x, y, tile, highlight=((x, y) in chemin and (x, y) != perso.getPos()), personnage=is_perso)
+                if tile.getBuilding() and isinstance(tile.getBuilding(), EntityMine):
+                    center_x, center_y = draw_hexagone(game_map, ecran, x, y, tile, return_center=True)
+                    pygame.draw.circle(ecran, (0, 0, 0), (center_x, center_y), 5)
+
 
         mouse_x, mouse_y = pygame.mouse.get_pos()
         tile_coord = get_hex_from_pixel(game_map, mouse_x, mouse_y)

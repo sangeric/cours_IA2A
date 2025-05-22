@@ -28,6 +28,9 @@ class Tile:
     
     def getBuilding(self):
         return self.building
+    
+    def setBuilding(self, building):
+        self.building = building
         
 
     

@@ -1,7 +1,9 @@
 class Entity:
-    def __init__(self, x, y):
+    def __init__(self, x, y, inventory_capacity = 0, linkable = False):
         self.x = x
         self.y = y
+        self.inventory_capacity = inventory_capacity
+        self.linkable = linkable
         self.inventory = {
             "rock": 0,
             "brick": 0,
@@ -11,5 +13,3 @@ class Entity:
             "water": 0,
             "wood": 0
         }
-        inventory_capacity = 0
-        linkable = False

@@ -15,7 +15,7 @@ def hex_corner(cx, cy, size, i):
     angle_rad = math.radians(angle_deg)
     return (cx + size * math.cos(angle_rad), cy + size * math.sin(angle_rad))
 
-def draw_hexagone(map, surface, x, y, tile, highlight=False, personnage=False):
+def draw_hexagone(map, surface, x, y, tile, highlight=False, personnage=False, return_center=False):
     size = map.getSize()
     h = math.sqrt(3) * size
     x_offset = x * 1.5 * size
@@ -29,6 +29,9 @@ def draw_hexagone(map, surface, x, y, tile, highlight=False, personnage=False):
         pygame.draw.polygon(surface, (255, 0, 0), points, 3)
     if personnage:
         pygame.draw.circle(surface, (255, 255, 255), (int(cx), int(cy)), int(size / 3))
+    
+    if return_center:
+        return cx, cy
 
 def get_hex_from_pixel(map, px, py):
     size = map.getSize()
