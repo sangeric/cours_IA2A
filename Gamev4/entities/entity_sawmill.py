@@ -13,7 +13,7 @@ class EntitySawmil(Entity):
         
     def update(self, tile):
         now = time.time()
-        if now - self.last_extract_time >= 1.0:
+        if now - self.last_extract_time >= 0.01:
             if tile.getResources().get("wood", 0) > 0:
                 tile.getResources()["wood"] -= 1
                 self.extract("wood")
