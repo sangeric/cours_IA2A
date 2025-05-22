@@ -1,7 +1,8 @@
 from map import Map
-from entities import EntityRobot, EntityMine, EntityStorage
+from entities import EntityRobot, EntityMine, EntityStorage, EntityFactory, EntityPipe
 import pygame
 from graphism.graphique import get_hex_from_pixel, draw_hexagone
+
 
 def main():
     pygame.init()
@@ -17,7 +18,11 @@ def main():
     mode_build = False
     mode_mine = False
     mode_storage = False
-    info_font = pygame.font.SysFont(None, 20)
+    mode_factory = False
+    mode_factory_choice = False
+    mode_pipe = False
+    
+    info_font = pygame.font.SysFont(None, 20)   
 #coucou
     surface_w = int((game_map.getWidth() + 1) * 1.5 * game_map.getSize())
     surface_h = int((game_map.getHeight() + 2) * (3 ** 0.5) * game_map.getSize())
@@ -31,7 +36,11 @@ def main():
     build_button_rect = pygame.Rect(230, 10, 100, 40)
     mine_button_rect = pygame.Rect(340, 10, 100, 40)
     storage_button_rect = pygame.Rect(340, 60, 100, 40) 
-    storage_button_rect = pygame.Rect(340, 110, 100, 40) 
+    factory_button_rect = pygame.Rect(340, 110, 100, 40) 
+    stone_button_rect = pygame.Rect(230, 440, 100, 40)
+    plank_button_rect = pygame.Rect(340, 440, 100, 40)
+    brick_button_rect = pygame.Rect(450, 440, 100, 40)
+    pipe_button_rect = pygame.Rect(450, 60, 100, 40)
     
     def draw_button():
         move_color = (0, 200, 0) if not mode_move else (200, 0, 0)
@@ -68,6 +77,21 @@ def main():
         pygame.draw.rect(ecran, build_color, build_button_rect)
         build_text = font.render("Build", True, (255, 255, 255))
         ecran.blit(build_text, (build_button_rect.x + 20, build_button_rect.y + 8))
+        if mode_factory_choice:
+            plank_color = (181, 101, 29)
+            pygame.draw.rect(ecran, plank_color, plank_button_rect)
+            plank_text = font.render("Plank", True, (0, 0, 0))
+            ecran.blit(plank_text, (plank_button_rect.x + 20, plank_button_rect.y + 8))
+            
+            stone_color = (120, 120, 120)
+            pygame.draw.rect(ecran, stone_color, stone_button_rect)
+            stone_text = font.render("Stone", True, (0, 0, 0))
+            ecran.blit(stone_text, (stone_button_rect.x + 20, stone_button_rect.y + 8))
+            
+            brick_color = (178, 34, 34)
+            pygame.draw.rect(ecran, brick_color, brick_button_rect)
+            brick_text = font.render("Brick", True, (0, 0, 0))
+            ecran.blit(brick_text, (brick_button_rect.x + 20, brick_button_rect.y + 8))
 
         if mode_build:
             mine_color = (200, 200, 0) if not mode_mine else (150, 150, 0)
@@ -79,6 +103,15 @@ def main():
             pygame.draw.rect(ecran, storage_color, storage_button_rect)
             storage_text = font.render("Storage", True, (0, 0, 0))
             ecran.blit(storage_text, (storage_button_rect.x + 5, storage_button_rect.y + 8))
+            
+            factory_color = (255, 150, 100) if not mode_factory else (200, 100, 50)
+            pygame.draw.rect(ecran, factory_color, factory_button_rect)
+            factory_text = font.render("Factory", True, (0, 0, 0))
+            ecran.blit(factory_text, (factory_button_rect.x + 5, factory_button_rect.y + 8))
+
+        pygame.draw.rect(ecran, (100, 200, 100), pipe_button_rect)
+        pipe_text = font.render("Pipe", True, (255, 255, 255))
+        ecran.blit(pipe_text, (pipe_button_rect.x + 10, pipe_button_rect.y + 8))
 
     running = True
     while running:
@@ -91,80 +124,138 @@ def main():
 
                 if move_button_rect.collidepoint(pos):
                     mode_move = True
-                    mode_collect = mode_mine = mode_storage = False 
+                    mode_collect = mode_build = mode_mine = mode_storage = mode_factory = mode_factory_choice = False
+                    continue
                 elif collect_button_rect.collidepoint(pos):
                     mode_collect = True
-                    mode_move = mode_mine = mode_storage = False 
+                    mode_move = mode_build = mode_mine = mode_storage = mode_factory = mode_factory_choice = False
+                    continue
                 elif build_button_rect.collidepoint(pos):
                     mode_build = True
-                    mode_move = mode_mine = mode_collect = mode_storage = False  
+                    mode_move = mode_collect = mode_mine = mode_storage = mode_factory = mode_factory_choice = False
+                    continue
                 elif mine_button_rect.collidepoint(pos):
                     mode_mine = True
-                    mode_move = mode_collect = mode_storage = False
+                    mode_move = mode_collect = mode_storage = mode_factory = mode_factory_choice = False
+                    continue
                 elif storage_button_rect.collidepoint(pos):
                     mode_storage = True
-                    mode_move = mode_mine = mode_collect = False
-                    
-                elif mode_collect:
-                    coord = get_hex_from_pixel(game_map, *pos)
-                    if coord:
-                        rx, ry = perso.getPos()
-                        adjacent = game_map.get_neighbors(rx, ry)
-                        adjacent.append((rx, ry)) 
+                    mode_move = mode_collect = mode_mine = mode_factory = mode_factory_choice = False
+                    continue
+                elif factory_button_rect.collidepoint(pos):
+                    mode_factory = True
+                    mode_move = mode_collect = mode_mine = mode_storage = mode_factory_choice = False
+                    continue
+                elif plank_button_rect.collidepoint(pos):
+                    if selected_factory_tile:
+                        selected_factory_tile.setBuildingRecipe("plank")
+                    continue
+                elif stone_button_rect.collidepoint(pos):
+                    if selected_factory_tile:
+                        selected_factory_tile.setBuildingRecipe("stone")
+                    continue
+                elif brick_button_rect.collidepoint(pos):
+                    if selected_factory_tile:
+                        selected_factory_tile.setBuildingRecipe("brick")
+                    continue
+                elif pipe_button_rect.collidepoint(pos):
+                    mode_pipe = True
+                    mode_move = mode_collect = mode_build = mode_mine = mode_storage = mode_factory = mode_factory_choice = False
+                    selected_source = None
+                    continue
 
-                        if coord in adjacent:
-                            tx, ty = coord
-                            tile = game_map.get_tile(ty, tx)
-                            collected = perso.collect_from_tile(tile, max_to_collect=10)
 
-                            if collected > 0:
-                                print(f"{collected} ressource(s) récoltée(s) sur ({tx},{ty})")
-                            else:
-                                print(f"Aucune ressource à récolter sur ({tx},{ty})")
+                tile_coord = get_hex_from_pixel(game_map, pos[0], pos[1])
+                if not tile_coord:
+                    continue
 
+                tx, ty = tile_coord
+                tile = game_map.get_tile(ty, tx)
 
-                elif mode_move:
-                    coord = get_hex_from_pixel(game_map, *pos)
-                    if coord and game_map.getGrid()[coord[1]][coord[0]].getName() != "-":
-                        target = coord
+                if tile and isinstance(tile.getBuilding(), EntityFactory):
+                    selected_factory_tile = tile
+                    mode_factory_choice = True
+                    mode_move = mode_collect = mode_build = mode_mine = mode_storage = mode_factory = False
+                    continue
+
+                if mode_collect:
+                    rx, ry = perso.getPos()
+                    adjacent = game_map.get_neighbors(rx, ry)
+                    adjacent.append((rx, ry))
+
+                    if (tx, ty) in adjacent:
+                        tile = game_map.get_tile(ty, tx)
+                        collected = perso.collect_from_tile(tile, max_to_collect=10)
+                        if collected > 0:
+                            print(f"{collected} ressource(s) récoltée(s) sur ({tx},{ty})")
+                        else:
+                            print(f"Aucune ressource à récolter sur ({tx},{ty})")
+                    continue
+
+                if mode_move:
+                    if tile and tile.getName() != "-":
+                        target = (tx, ty)
                         chemin = perso.dijkstra(graph, target)
                         chemin_index = 0
+                    continue
 
-                elif mode_mine:
-                    coord = get_hex_from_pixel(game_map, *pos)
-                    if coord:
-                        tx, ty = coord
-                        tile = game_map.get_tile(ty, tx)
-                        if tile and tile.getName() == "mountain":
-                            print("clic  montagne")
-                            if tx % 2 == 0:
-                                offsets = [(1, 0), (1, -1), (0, -1), (0, 1), (-1, 0), (-1, -1)]
-                                
-                            else:
-                                offsets = [(1, 0), (1, 1), (0, -1), (0, 1), (-1, 0), (-1, 1)]
-                            voisins = [(tx + dx, ty + dy) for dx, dy in offsets]
-                            if perso.getPos() in voisins:
-                                tile.setBuilding(EntityMine(tx, ty))
-                                mode_mine = False
-                            else:
-                                print("robot trop loin pour construire une mine")
-                                
-                elif mode_storage:
-                    coord = get_hex_from_pixel(game_map, *pos)
-                    if coord:
-                        tx, ty = coord
-                        tile = game_map.get_tile(ty, tx)
-                        if tile and tile.getName() in ("sand", "plains") and tile.getBuilding() is None:
-                            if tx % 2 == 0:
-                                offsets = [(1, 0), (1, -1), (0, -1), (0, 1), (-1, 0), (-1, -1)]
-                                
-                            else:
-                                offsets = [(1, 0), (1, 1), (0, -1), (0, 1), (-1, 0), (-1, 1)]
-                            voisins = [(tx + dx, ty + dy) for dx, dy in offsets]
-                            if perso.getPos() in voisins:
-                                tile.setBuilding(EntityStorage(tx, ty))
-                                print(f"Storage placé en ({tx}, {ty})")
-                                mode_storage = False
+                if mode_mine:
+                    if tile and tile.getName() == "mountain":
+                        if tx % 2 == 0:
+                            offsets = [(1, 0), (1, -1), (0, -1), (0, 1), (-1, 0), (-1, -1)]
+                        else:
+                            offsets = [(1, 0), (1, 1), (0, -1), (0, 1), (-1, 0), (-1, 1)]
+                        voisins = [(tx + dx, ty + dy) for dx, dy in offsets]
+                        if perso.getPos() in voisins:
+                            tile.setBuilding(EntityMine(tx, ty))
+                            mode_mine = mode_build = False
+                        else:
+                            print("robot trop loin pour construire une mine")
+                    continue
+
+                if mode_storage:
+                    if tile and tile.getName() in ("sand", "plains") and tile.getBuilding() is None:
+                        if tx % 2 == 0:
+                            offsets = [(1, 0), (1, -1), (0, -1), (0, 1), (-1, 0), (-1, -1)]
+                        else:
+                            offsets = [(1, 0), (1, 1), (0, -1), (0, 1), (-1, 0), (-1, 1)]
+                        voisins = [(tx + dx, ty + dy) for dx, dy in offsets]
+                        if perso.getPos() in voisins:
+                            tile.setBuilding(EntityStorage(tx, ty))
+                            print(f"Storage placé en ({tx}, {ty})")
+                            mode_storage = mode_build = False
+                    continue
+
+                if mode_factory:
+                    if tile and tile.getName() in ("sand", "plains") and tile.getBuilding() is None:
+                        if tx % 2 == 0:
+                            offsets = [(1, 0), (1, -1), (0, -1), (0, 1), (-1, 0), (-1, -1)]
+                        else:
+                            offsets = [(1, 0), (1, 1), (0, -1), (0, 1), (-1, 0), (-1, 1)]
+                        voisins = [(tx + dx, ty + dy) for dx, dy in offsets]
+                        if perso.getPos() in voisins:
+                            tile.setBuilding(EntityFactory(tx, ty))
+                            print(f"Factory placé en ({tx}, {ty})")
+                            mode_factory = mode_build = False
+                    continue
+
+                if mode_pipe:
+                    if not selected_source:
+                        if isinstance(tile.getBuilding(), EntityMine):
+                            selected_source = tile.getBuilding()
+                            print("Source pipe sélectionnée")
+                    else:
+                        if isinstance(tile.getBuilding(), EntityStorage):
+                            pipe = EntityPipe(tx, ty, selected_source, tile.getBuilding())
+                            tile.setPipe(pipe)
+                            print(f"Pipe créé de la mine à ({tx}, {ty})")
+                            mode_pipe = False
+                            selected_source = None
+                    continue
+
+
+                
+
                             
                             
 
@@ -181,6 +272,10 @@ def main():
                 building = tile.getBuilding()
                 if building and isinstance(building, EntityMine):
                     building.update(tile)
+                pipe = tile.getPipe()
+                if pipe:
+                    pipe.update()
+
 
         ecran.fill((0, 0, 0))
         for y in range(game_map.getHeight()):
@@ -195,6 +290,15 @@ def main():
                 if isinstance(tile.getBuilding(), EntityStorage):
                     center_x, center_y = draw_hexagone(game_map, ecran, x, y, tile, return_center=True)
                     pygame.draw.rect(ecran, (200, 200, 255), (center_x - 5, center_y - 5, 10, 10)) 
+                if isinstance(tile.getBuilding(), EntityFactory):
+                    center_x, center_y = draw_hexagone(game_map, ecran, x, y, tile, return_center=True)
+                    size = 10  # taille du triangle
+                    triangle_points = [
+                        (center_x, center_y - size),  # sommet haut
+                        (center_x - size, center_y + size),  # coin bas gauche
+                        (center_x + size, center_y + size),  # coin bas droit
+                    ]
+                    pygame.draw.polygon(ecran, (255, 150, 100), triangle_points)
 
 
         mouse_x, mouse_y = pygame.mouse.get_pos()
@@ -233,7 +337,7 @@ def main():
             except IndexError:
                 pass
         
-        if tile_coord:
+        
             tx, ty = tile_coord
             try:
                 tile = game_map.get_tile(ty, tx)
@@ -259,6 +363,8 @@ def main():
                         for resource, amount in building.inventory.items():
                             if amount > 0:
                                 lines.append(f"  - {resource} : {amount}")
+                    if hasattr(building, "selected_recipe") and building.selected_recipe:
+                        lines.append(f"Recette sélectionnée : {building.selected_recipe}")
 
                 if lines:
                     padding = 10

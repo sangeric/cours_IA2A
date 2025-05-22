@@ -12,9 +12,9 @@ class EntityMine(Entity):
             self.inventory[item] = self.inventory.get(item, 0) + 1
         
     def update(self, tile):
-        now = time.time()
-        if now - self.last_extract_time >= 1.0:
-            if tile.getResources().get("rock", 0) > 0:
-                tile.getResources()["rock"] -= 1
-                self.extract("rock")
-            self.last_extract_time = now
+        for resource, qty in tile.getResources().items():
+            if qty > 0:
+                extracted = min(qty, 10)  
+                tile.getResources()[resource] -= extracted
+                for _ in range(extracted):
+                    self.extract(resource)

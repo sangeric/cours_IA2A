@@ -9,6 +9,7 @@ class Tile:
         self.build_options = build_options or []
         self.entity = entity
         self.building = building
+        self.pipe = None
         
         self.resources = {
             "rock": 0,
@@ -31,6 +32,18 @@ class Tile:
     
     def setBuilding(self, building):
         self.building = building
+    
+    def setBuildingRecipe(self, recipe):
+        if self.building and hasattr(self.building, "set_recipe"):
+            self.building.set_recipe(recipe)
+        else:
+            print(f"[WARNING] Impossible de définir la recette : aucun bâtiment ou méthode 'set_recipe' manquante sur {self.building}")
+
+    def getPipe(self):
+        return self.pipe
+
+    def setPipe(self, pipe):
+        self.pipe = pipe
         
 
     
