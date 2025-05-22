@@ -17,7 +17,7 @@ def main():
     mode_build = False
     mode_mine = False
     info_font = pygame.font.SysFont(None, 20)
-
+#coucou
     surface_w = int((game_map.getWidth() + 1) * 1.5 * game_map.getSize())
     surface_h = int((game_map.getHeight() + 2) * (3 ** 0.5) * game_map.getSize())
     ecran = pygame.display.set_mode((surface_w, surface_h))
