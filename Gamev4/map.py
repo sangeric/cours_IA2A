@@ -37,8 +37,8 @@ class Map:
     COSTS = {
         "-": float('inf'),
         "forest": 2,
-        "mountain": float('inf'),  # rend inaccessible
-        "water": float('inf'),     # rend inaccessible
+        "mountain": float('inf'),  
+        "water": float('inf'),     
         "sand": 3,
         "plains": 1
     }

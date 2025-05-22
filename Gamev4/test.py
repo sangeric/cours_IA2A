@@ -13,6 +13,10 @@ def main():
     chemin = []
     chemin_index = 0
     mode_move = False
+    mode_collect = False
+
+    collect_button_rect = pygame.Rect(120, 10, 100, 40)
+
     mode_build = False
     mode_mine = False
     info_font = pygame.font.SysFont(None, 20)
@@ -34,6 +38,32 @@ def main():
         pygame.draw.rect(ecran, move_color, move_button_rect)
         move_text = font.render("Move", True, (255, 255, 255))
         ecran.blit(move_text, (move_button_rect.x + 20, move_button_rect.y + 8))
+        pygame.draw.rect(ecran, (0, 100, 200), collect_button_rect)
+        collect_text = font.render("Collect", True, (255, 255, 255))
+        ecran.blit(collect_text, (collect_button_rect.x + 10, collect_button_rect.y + 8))
+        
+
+        robot_lines = [f"Inventaire du robot ({sum(perso.inventory.values())}/{perso.inventory_capacity})"]
+        for resource in ["wood", "coal", "rock", "water"]:
+            amount = perso.inventory.get(resource, 0)
+            robot_lines.append(f"  - {resource} : {amount}")
+
+
+        padding = 10
+        line_height = 18
+        info_width = max(info_font.size(line)[0] for line in robot_lines) + 2 * padding
+        info_height = line_height * len(robot_lines) + 2 * padding
+
+        robot_info_surface = pygame.Surface((info_width, info_height), pygame.SRCALPHA)
+        robot_info_surface.fill((40, 40, 40, 220))
+
+        for i, line in enumerate(robot_lines):
+            text = info_font.render(line, True, (255, 255, 255))
+            robot_info_surface.blit(text, (padding, padding + i * line_height))
+
+        ecran.blit(robot_info_surface, (10, 60))  
+
+
 
         # Bouton Build
         build_color = (0, 0, 200) if not mode_build else (0, 0, 100)
@@ -59,15 +89,27 @@ def main():
 
                 if move_button_rect.collidepoint(pos):
                     mode_move = True
-                    mode_build = mode_mine = False
+                    mode_collect = False 
+                elif collect_button_rect.collidepoint(pos):
+                    mode_collect = True
+                    mode_move = False     
+                elif mode_collect:
+                    coord = get_hex_from_pixel(game_map, *pos)
+                    if coord:
+                        rx, ry = perso.getPos()
+                        adjacent = game_map.get_neighbors(rx, ry)
+                        adjacent.append((rx, ry)) 
 
-                elif build_button_rect.collidepoint(pos):
-                    mode_build = True
-                    mode_move = mode_mine = False
+                        if coord in adjacent:
+                            tx, ty = coord
+                            tile = game_map.get_tile(ty, tx)
+                            collected = perso.collect_from_tile(tile, max_to_collect=10)
 
-                elif mine_button_rect.collidepoint(pos):
-                    mode_mine = True
-                    mode_move = False
+                            if collected > 0:
+                                print(f"{collected} ressource(s) récoltée(s) sur ({tx},{ty})")
+                            else:
+                                print(f"Aucune ressource à récolter sur ({tx},{ty})")
+
 
                 elif mode_move:
                     coord = get_hex_from_pixel(game_map, *pos)
@@ -131,7 +173,7 @@ def main():
                 tile = game_map.get_tile(ty, tx)
                 if tile:
                     name = tile.getName()
-                    resources = tile.getResources()  # Dictionnaire
+                    resources = tile.getResources() 
 
                     lines = [f"({tx}, {ty}) \"{name}\""]
                     res_lines = [f"{res}: {qty}" for res, qty in resources.items() if qty > 0]
@@ -141,14 +183,13 @@ def main():
                     else:
                         lines.append("Aucune ressource")
 
-                    # Taille et apparence de l'infobulle
                     padding = 5
                     line_height = 18
                     width = max(info_font.size(line)[0] for line in lines) + 2 * padding
                     height = line_height * len(lines) + 2 * padding
 
                     tooltip_surface = pygame.Surface((width, height), pygame.SRCALPHA)
-                    tooltip_surface.fill((0, 0, 0, 180))  # Fond noir semi-transparent
+                    tooltip_surface.fill((0, 0, 0, 180))  
 
                     for i, line in enumerate(lines):
                         text = info_font.render(line, True, (255, 255, 255))
