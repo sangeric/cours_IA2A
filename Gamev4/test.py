@@ -1,7 +1,49 @@
 from map import Map
-from entities import EntityRobot, EntityMine, EntityStorage
+from entities import EntityRobot, EntityMine, EntityStorage, EntitySawmil, EntityFactory
 import pygame
 from graphism.graphique import get_hex_from_pixel, draw_hexagone
+
+
+dependencies = {
+    "EntityMine": [],
+    "EntitySawmil": [],
+    "EntityFactory": ["EntityMine", "EntitySawmil"]
+}
+
+built_entities = set()
+
+def can_build(entity_name, built_set, dependencies):
+    return all(dep in built_set for dep in dependencies.get(entity_name, []))
+
+def tri_topologique(graph):
+    from collections import defaultdict, deque
+
+    in_degree = defaultdict(int)
+    adj = defaultdict(list)
+
+    for node in graph:
+        for neighbor in graph[node]:
+            adj[neighbor].append(node)
+            in_degree[node] += 1
+        if node not in in_degree:
+            in_degree[node] = 0
+
+    queue = deque([node for node in graph if in_degree[node] == 0])
+    order = []
+
+    while queue:
+        node = queue.popleft()
+        order.append(node)
+        for neighbor in adj[node]:
+            in_degree[neighbor] -= 1
+            if in_degree[neighbor] == 0:
+                queue.append(neighbor)
+
+    if len(order) != len(graph):
+        raise ValueError("Cycle détecté dans les dépendances")
+
+    return order
+
 
 def main():
     pygame.init()
@@ -17,6 +59,9 @@ def main():
     mode_build = False
     mode_mine = False
     mode_storage = False
+    mode_sawmill = False
+    mode_factory = False
+
     info_font = pygame.font.SysFont(None, 20)
 #coucou
     surface_w = int((game_map.getWidth() + 1) * 1.5 * game_map.getSize())
@@ -32,6 +77,8 @@ def main():
     mine_button_rect = pygame.Rect(340, 10, 100, 40)
     storage_button_rect = pygame.Rect(340, 60, 100, 40) 
     sawmill_button_rect = pygame.Rect(340, 110, 100, 40) 
+    factory_button_rect = pygame.Rect(340, 160, 100, 40)
+
     
     def draw_button():
         move_color = (0, 200, 0) if not mode_move else (200, 0, 0)
@@ -79,12 +126,27 @@ def main():
             pygame.draw.rect(ecran, storage_color, storage_button_rect)
             storage_text = font.render("Storage", True, (0, 0, 0))
             ecran.blit(storage_text, (storage_button_rect.x + 5, storage_button_rect.y + 8))
+            
+            sawmill_color = (139, 69, 19) if not mode_sawmill else (101, 67, 33)
+
+            pygame.draw.rect(ecran, sawmill_color, sawmill_button_rect)
+            sawmill_text = font.render("Sawmill", True, (255, 255, 255))
+            ecran.blit(sawmill_text, (sawmill_button_rect.x + 5, sawmill_button_rect.y + 8))
+
+        if can_build("EntityFactory", built_entities, dependencies):
+            factory_color = (100, 100, 100)
+            factory_button_rect = pygame.Rect(340, 160, 100, 40)
+            pygame.draw.rect(ecran, factory_color, factory_button_rect)
+            factory_text = font.render("Factory", True, (255, 255, 255))
+            ecran.blit(factory_text, (factory_button_rect.x + 5, factory_button_rect.y + 8))
+
 
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
@@ -104,6 +166,10 @@ def main():
                 elif storage_button_rect.collidepoint(pos):
                     mode_storage = True
                     mode_move = mode_mine = mode_collect = False
+                elif sawmill_button_rect.collidepoint(pos):
+                    mode_sawmill = True
+                    mode_storage = mode_mine = mode_collect = mode_move = False
+
                     
                 elif mode_collect:
                     coord = get_hex_from_pixel(game_map, *pos)
@@ -145,6 +211,7 @@ def main():
                             voisins = [(tx + dx, ty + dy) for dx, dy in offsets]
                             if perso.getPos() in voisins:
                                 tile.setBuilding(EntityMine(tx, ty))
+                                built_entities.add("EntityMine")
                                 mode_mine = False
                             else:
                                 print("robot trop loin pour construire une mine")
@@ -165,6 +232,54 @@ def main():
                                 tile.setBuilding(EntityStorage(tx, ty))
                                 print(f"Storage placé en ({tx}, {ty})")
                                 mode_storage = False
+                                
+                elif mode_sawmill:
+                    coord = get_hex_from_pixel(game_map, *pos)
+                    if coord:
+                        tx, ty = coord
+                        tile = game_map.get_tile(ty, tx)
+                        if tile and tile.getName() == "forest" and tile.getBuilding() is None:
+                            if tx % 2 == 0:
+                                offsets = [(1, 0), (1, -1), (0, -1), (0, 1), (-1, 0), (-1, -1)]
+                            else:
+                                offsets = [(1, 0), (1, 1), (0, -1), (0, 1), (-1, 0), (-1, 1)]
+
+                            voisins = [(tx + dx, ty + dy) for dx, dy in offsets]
+                            if perso.getPos() in voisins:
+                                tile.setBuilding(EntitySawmil(tx, ty))
+                                built_entities.add("EntitySawmil")
+                                print(f"Sawmill placé en ({tx}, {ty})")
+                                mode_sawmill = False
+                            else:
+                                print("Robot trop loin pour construire la scierie")
+                elif mode_factory:
+                    coord = get_hex_from_pixel(game_map, *pos)
+                    if coord:
+                        tx, ty = coord
+                        tile = game_map.get_tile(ty, tx)
+                        entity_name = "EntityFactory"
+
+                        if tile and tile.getBuilding() is None:
+                            if can_build(entity_name, built_entities, dependencies):
+                                if perso.getPos() in game_map.get_neighbors(tx, ty):
+                                    tile.setBuilding(EntityFactory(tx, ty))
+                                    built_entities.add(entity_name)
+                                    print(f"✅ Usine construite en ({tx}, {ty})")
+                                    print("🧱 Ordre de construction :", tri_topologique(dependencies))
+                                    mode_factory = False
+                                else:
+                                    print("Robot trop loin pour construire une usine")
+                            else:
+                                print("Impossible de construire une usine : mine + scierie requises")
+                        else:
+                            print("Emplacement invalide ou usine déjà présente")
+                
+                elif factory_button_rect.collidepoint(pos) and can_build("EntityFactory", built_entities, dependencies):
+                    mode_factory = True
+                    mode_storage = mode_mine = mode_collect = mode_move = False
+
+
+
                             
                             
 
@@ -181,6 +296,8 @@ def main():
                 building = tile.getBuilding()
                 if building and isinstance(building, EntityMine):
                     building.update(tile)
+                elif building and isinstance(building, EntitySawmil):
+                    building.update(tile)
 
         ecran.fill((0, 0, 0))
         for y in range(game_map.getHeight()):
@@ -194,7 +311,17 @@ def main():
                     pygame.draw.circle(ecran, (0, 0, 0), (center_x, center_y), 5)
                 if isinstance(tile.getBuilding(), EntityStorage):
                     center_x, center_y = draw_hexagone(game_map, ecran, x, y, tile, return_center=True)
-                    pygame.draw.rect(ecran, (200, 200, 255), (center_x - 5, center_y - 5, 10, 10)) 
+                    pygame.draw.rect(ecran, (200, 200, 255), (center_x - 5, center_y - 5, 10, 10))
+                if isinstance(tile.getBuilding(), EntitySawmil):
+                    center_x, center_y = draw_hexagone(game_map, ecran, x, y, tile, return_center=True)
+                    pygame.draw.rect(ecran, (160, 82, 45), (center_x - 4, center_y - 4, 8, 8)) 
+                if isinstance(tile.getBuilding(), EntityFactory):
+                    center_x, center_y = draw_hexagone(game_map, ecran, x, y, tile, return_center=True)
+                    pygame.draw.rect(ecran, (100, 100, 100), (center_x - 5, center_y - 5, 10, 10))  
+
+
+                
+
 
 
         mouse_x, mouse_y = pygame.mouse.get_pos()
