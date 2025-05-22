@@ -17,7 +17,7 @@ def main():
     mode_build = False
     mode_mine = False
     info_font = pygame.font.SysFont(None, 20)
-#coucou
+
     surface_w = int((game_map.getWidth() + 1) * 1.5 * game_map.getSize())
     surface_h = int((game_map.getHeight() + 2) * (3 ** 0.5) * game_map.getSize())
     ecran = pygame.display.set_mode((surface_w, surface_h))
@@ -31,7 +31,6 @@ def main():
     mine_button_rect = pygame.Rect(340, 10, 100, 40)
 
     def draw_button():
-        # Bouton Move
         move_color = (0, 200, 0) if not mode_move else (200, 0, 0)
         pygame.draw.rect(ecran, move_color, move_button_rect)
         move_text = font.render("Move", True, (255, 255, 255))
@@ -62,13 +61,11 @@ def main():
 
         ecran.blit(robot_info_surface, (10, 60))  
 
-        # Bouton Build
         build_color = (0, 0, 200) if not mode_build else (0, 0, 100)
         pygame.draw.rect(ecran, build_color, build_button_rect)
         build_text = font.render("Build", True, (255, 255, 255))
         ecran.blit(build_text, (build_button_rect.x + 20, build_button_rect.y + 8))
 
-        # Affichage conditionnel du bouton Mine
         if mode_build:
             mine_color = (200, 200, 0) if not mode_mine else (150, 150, 0)
             pygame.draw.rect(ecran, mine_color, mine_button_rect)
@@ -129,7 +126,6 @@ def main():
                         tile = game_map.get_tile(ty, tx)
                         if tile and tile.getName() == "mountain":
                             print("clic  montagne")
-                            # Vérifier si une entité (robot) est sur une tuile adjacente
                             if tx % 2 == 0:
                                 offsets = [(1, 0), (1, -1), (0, -1), (0, 1), (-1, 0), (-1, -1)]
                                 

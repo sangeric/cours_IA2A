@@ -1,10 +1,10 @@
 import time
 from .entity import Entity
 
-class EntityMine(Entity):
+class EntitySawmil(Entity):
     def __init__(self, x, y):
         super().__init__(x, y, inventory_capacity = 1000, linkable = True)
-        self.extractable_items = ["rock"]
+        self.extractable_items = ["wood"]
         self.last_extract_time = time.time()
     
     def extract(self, item):
@@ -14,7 +14,7 @@ class EntityMine(Entity):
     def update(self, tile):
         now = time.time()
         if now - self.last_extract_time >= 1.0:
-            if tile.getResources().get("rock", 0) > 0:
-                tile.getResources()["rock"] -= 1
-                self.extract("rock")
+            if tile.getResources().get("wood", 0) > 0:
+                tile.getResources()["wood"] -= 1
+                self.extract("wood")
             self.last_extract_time = now
