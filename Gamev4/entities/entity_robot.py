@@ -4,7 +4,13 @@ from .entity import Entity
 class EntityRobot(Entity):
     def __init__(self, x, y):
         super().__init__(x, y)
-        self.inventory_capacity = 100 
+        self.inventory_capacity = 10000 
+        self.inventory = {
+            "wood": 0,
+            "water": 0,
+            "rock": 0,
+            "coal": 0
+        }
         
     def getPos(self):
         return (self.x, self.y)
@@ -37,5 +43,65 @@ class EntityRobot(Entity):
                 curr = came_from[curr]
             path.reverse()
         return path
+    
+    def get_total_inventory(self):
+        return sum(self.inventory.values())
+
+    def collect_resources(self, game_map):
+        max_to_collect = 10 
+        collected = 0
+
+        remaining_capacity = self.inventory_capacity - self.get_total_inventory()
+        if remaining_capacity <= 0:
+            return
+
+        x, y = self.getPos()
+        neighbors = game_map.get_neighbors(x, y)
+
+        for nx, ny in neighbors:
+            if collected >= max_to_collect:
+                break  
+
+            tile = game_map.get_tile(y=ny, x=nx)
+            resources = tile.getResources()
+
+            for resource, qty in resources.items():
+                if qty > 0 and remaining_capacity > 0:
+                    to_collect = min(qty, remaining_capacity, max_to_collect - collected)
+                    if to_collect <= 0:
+                        continue
+                    self.inventory[resource] += to_collect
+                    tile.resources[resource] -= to_collect
+                    collected += to_collect
+                    remaining_capacity -= to_collect
+
+                    if collected >= max_to_collect:
+                        break 
+
+    def collect_from_tile(self, tile, max_to_collect=10):
+        collected = 0
+        remaining_capacity = self.inventory_capacity - self.get_total_inventory()
+        if remaining_capacity <= 0:
+            return 0
+
+        resources = tile.getResources()
+
+        for res, qty in resources.items():
+            if qty > 0 and remaining_capacity > 0:
+                to_collect = min(qty, remaining_capacity, max_to_collect - collected)
+                if to_collect <= 0:
+                    continue
+                self.inventory[res] += to_collect
+                tile.resources[res] -= to_collect
+                collected += to_collect
+                remaining_capacity -= to_collect
+
+            if collected >= max_to_collect:
+                break
+
+        return collected
+
+
+
         
     
